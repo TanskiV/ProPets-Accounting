@@ -2,6 +2,7 @@ package accounting.filter;
 
 import accounting.jwt.TokenProvider;
 import io.jsonwebtoken.Claims;
+import io.jsonwebtoken.impl.DefaultClaims;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.Ordered;
 import org.springframework.core.annotation.Order;
@@ -35,7 +36,13 @@ public class CustomFilter extends GenericFilterBean {
         HttpServletRequest req = (HttpServletRequest) request;
         String token = req.getHeader("X-Token");
         String idFromPath = req.getServletPath().split("/")[4];
-        Claims claimsToken = tokenProvider.decodeJWT(token);
+        Claims claimsToken = new DefaultClaims();
+        try{
+              claimsToken  = tokenProvider.decodeJWT(token);
+        }catch (IllegalArgumentException e){
+
+        }
+
         if (!req.getMethod().equals(RequestMethod.POST.toString())) {
             try {
                 if (tokenProvider.validateToken(token) && idFromPath.equals(claimsToken.getId())) {
