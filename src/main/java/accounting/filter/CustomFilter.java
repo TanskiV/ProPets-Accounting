@@ -29,21 +29,17 @@ public class CustomFilter extends GenericFilterBean {
 
     @Autowired
     TokenProvider tokenProvider;
+    private Claims claimsToken;
 
 
     @Override
     public void doFilter(ServletRequest request, ServletResponse response, FilterChain chain) throws IOException, ServletException {
         HttpServletRequest req = (HttpServletRequest) request;
         String token = req.getHeader("X-Token");
-        String idFromPath = req.getServletPath().split("/")[4];
-        Claims claimsToken = new DefaultClaims();
-        try{
-              claimsToken  = tokenProvider.decodeJWT(token);
-        }catch (IllegalArgumentException e){
-
-        }
 
         if (!req.getMethod().equals(RequestMethod.POST.toString())) {
+            String idFromPath = req.getServletPath().split("/")[4];
+            Claims claimsToken = tokenProvider.decodeJWT(token);
             try {
                 if (tokenProvider.validateToken(token) && idFromPath.equals(claimsToken.getId())) {
                     chain.doFilter(request, response);
