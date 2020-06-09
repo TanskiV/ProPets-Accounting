@@ -11,13 +11,16 @@ import accounting.jwt.TokenProvider;
 import accounting.model.UserAccount;
 import com.google.gson.Gson;
 import io.jsonwebtoken.Claims;
+import org.apache.catalina.connector.Response;
 import org.bson.internal.Base64;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 
 import javax.naming.AuthenticationException;
+import javax.servlet.http.HttpServletResponse;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashSet;
@@ -178,8 +181,10 @@ public class AccountingServiceImpl implements AccountingService {
         String token = tokenProvider.createJWT(userClaims.getId(), roles);
         HttpHeaders headers = new HttpHeaders();
         headers.set("X-Token", token);
+        headers.set("Id", user.getEmail());
         return ResponseEntity.ok()
-                .headers(headers).build();
+                .headers(headers)
+                .build();
     }
 
 }

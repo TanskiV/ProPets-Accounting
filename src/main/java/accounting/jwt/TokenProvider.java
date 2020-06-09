@@ -50,8 +50,6 @@ public class TokenProvider {
         Claims claims = Jwts.parser()
                 .setSigningKey(DatatypeConverter.parseBase64Binary(SECRET_KEY))
                 .parseClaimsJws(jwt).getBody();
-
-        System.out.println(claims.getId() + claims.getAudience());
         return claims;
     }
 
