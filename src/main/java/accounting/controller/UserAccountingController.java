@@ -9,6 +9,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import javax.naming.AuthenticationException;
 import java.util.Set;
 
 @RestController
@@ -74,8 +75,13 @@ public class UserAccountingController {
 	}
 
 	@PutMapping("/{lang}/v1/validation")
-	public boolean validateToken(@RequestHeader("X-Token") String xToken){
+	public boolean validateToken(@RequestHeader("X-Token") String xToken) throws AuthenticationException {
 		return accountingService.tokenValidator(xToken);
+	}
+
+	@PutMapping("/{lang}/v1/validation/update")
+	public ResponseEntity<String>  updateToken(@RequestHeader("X-Token") String xToken){
+		return accountingService.updateToken(xToken);
 	}
 
 }

@@ -10,14 +10,19 @@ import accounting.exeptions.UserExistsException;
 import accounting.jwt.TokenProvider;
 import accounting.model.UserAccount;
 import com.google.gson.Gson;
+import io.jsonwebtoken.Claims;
 import org.bson.internal.Base64;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 
+import javax.naming.AuthenticationException;
+import java.util.Arrays;
+import java.util.Collections;
 import java.util.HashSet;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 
 @Service
@@ -30,12 +35,12 @@ public class AccountingServiceImpl implements AccountingService {
     TokenProvider tokenProvider;
 
     @Override
-    public ProfileUserDto register(NewUserDto newUserDto)  {
+    public ProfileUserDto register(NewUserDto newUserDto) {
         String data = "";
-        if (newUserDto.getPassword() != null && newUserDto.getEmail() != null){
-           data = newUserDto.getEmail() + ":" + newUserDto.getPassword();
-        }else {
-            throw  new TokenAuthenticationException("Bad json");
+        if (newUserDto.getPassword() != null && newUserDto.getEmail() != null) {
+            data = newUserDto.getEmail() + ":" + newUserDto.getPassword();
+        } else {
+            throw new TokenAuthenticationException("Bad json");
         }
         System.out.println(data);
         String token = Base64.encode(data.getBytes());
@@ -87,157 +92,94 @@ public class AccountingServiceImpl implements AccountingService {
 
     @Override
     public ProfileUserDto userInfo(String xToken, String login) {
-        ProfileUserDto profileUserDto = new ProfileUserDto();
-        try {
-            if (tokenProvider.validateToken(xToken)) {
-                UserAccount user = userAccountingRepository.findById(login).orElseThrow(UserExistsException::new);
-                profileUserDto = profileUserToProfileUserDto(user);
-            }
-        } catch (TokenAuthenticationException e) {
-            throw new TokenAuthenticationException(e.getMessage());
-        }
-        return profileUserDto;
+        UserAccount user = userAccountingRepository.findById(login).orElseThrow(UserExistsException::new);
+        return profileUserToProfileUserDto(user);
     }
 
     @Override
     public ProfileUserDto editUser(String token, EditUserDto editUserDto, String login) {
-        ProfileUserDto profileUserDto = new ProfileUserDto();
-        try {
-            if (tokenProvider.validateToken(token)) {
-                UserAccount user = userAccountingRepository.findById(login).orElseThrow(UserExistsException::new);
-                user.setAvatar(editUserDto.getAvatar());
-                user.setName(editUserDto.getName());
-                user.setPhone(editUserDto.getPhone());
-                userAccountingRepository.save(user);
-                profileUserDto = profileUserToProfileUserDto(user);
-            }
-        } catch (TokenAuthenticationException e) {
-            throw new TokenAuthenticationException(e.getMessage());
-        }
-
-        return profileUserDto;
+        UserAccount user = userAccountingRepository.findById(login).orElseThrow(UserExistsException::new);
+        user.setAvatar(editUserDto.getAvatar());
+        user.setName(editUserDto.getName());
+        user.setPhone(editUserDto.getPhone());
+        userAccountingRepository.save(user);
+        return profileUserToProfileUserDto(user);
     }
 
     @Override
     public ProfileUserDto removeUser(String xToken, String login) {
-        ProfileUserDto profileUserDto = new ProfileUserDto();
-        try {
-            if (tokenProvider.validateToken(xToken)) {
-                UserAccount user = userAccountingRepository.findById(login).orElseThrow(UserExistsException::new);
-                profileUserDto = profileUserToProfileUserDto(user);
-                userAccountingRepository.delete(user);
-            }
-        } catch (TokenAuthenticationException e) {
-            throw new TokenAuthenticationException(e.getMessage());
-        }
-        return profileUserDto;
+        UserAccount user = userAccountingRepository.findById(login).orElseThrow(UserExistsException::new);
+        userAccountingRepository.delete(user);
+        return profileUserToProfileUserDto(user);
     }
 
     @Override
     public Set<String> addRoles(String xToken, String login, String role) {
-        Set<String> roles = new HashSet<>();
-        try {
-            if (tokenProvider.validateToken(xToken)){
-              UserAccount account = userAccountingRepository.findById(login).orElseThrow(UserExistsException::new);
-              account.addRole(role);
-             roles = account.getRoles();
-             userAccountingRepository.save(account);
-            }
-        } catch (TokenAuthenticationException e) {
-            throw new TokenAuthenticationException(e.getMessage());
-        }
-        return roles;
+        UserAccount account = userAccountingRepository.findById(login).orElseThrow(UserExistsException::new);
+        account.addRole(role);
+        userAccountingRepository.save(account);
+        return account.getRoles();
     }
 
     @Override
     public Set<String> removeRoles(String xToken, String login, String role) {
-        Set<String> roles = new HashSet<>();
-       try{
-           if (tokenProvider.validateToken(xToken)){
-               UserAccount user = userAccountingRepository.findById(login).orElseThrow(UserExistsException::new);
-               user.removeRole(role);
-               roles = user.getRoles();
-               userAccountingRepository.save(user);
-           }
-       }catch (TokenAuthenticationException e){
-           throw new TokenAuthenticationException(e.getMessage());
-       }
-        return roles;
+        UserAccount user = userAccountingRepository.findById(login).orElseThrow(UserExistsException::new);
+        user.removeRole(role);
+        userAccountingRepository.save(user);
+        return user.getRoles();
     }
 
     @Override
     public BlockDto blockAccount(String xToken, String login, boolean status) {
-        BlockDto blockDto = new BlockDto();
-        try {
-            if (tokenProvider.validateToken(xToken)){
-                UserAccount userAccount = userAccountingRepository.findById(login).orElseThrow(UserExistsException::new);
-                userAccount.setBlock(status);
-                blockDto.setBlock(userAccount.isBlock());
-                blockDto.setLogin(userAccount.getEmail());
-                userAccountingRepository.save(userAccount);
-            }
-        }catch (TokenAuthenticationException e){
-            throw new TokenAuthenticationException(e.getMessage());
-        }
+        UserAccount userAccount = userAccountingRepository.findById(login).orElseThrow(UserExistsException::new);
+        userAccount.setBlock(status);
+        userAccountingRepository.save(userAccount);
 
-        return blockDto;
+        return new BlockDto().builder()
+                .login(userAccount.getEmail())
+                .block(userAccount.isBlock()).build();
     }
 
     @Override
     public Set<String> addFavorite(String xToken, String login, String idFavorite) {
-        Set<String> favoriteDto = new HashSet<>();
-        try {
-            if (tokenProvider.validateToken(xToken)){
-                UserAccount account = userAccountingRepository.findById(login).orElseThrow(UserExistsException::new);
-                account.addFavorite(idFavorite);
-                favoriteDto = account.getFavorites();
-                userAccountingRepository.save(account);
-            }
-        }catch (TokenAuthenticationException e){
-            throw new TokenAuthenticationException(e.getMessage());
-        }
-        return favoriteDto;
-    }
+        UserAccount account = userAccountingRepository.findById(login).orElseThrow(UserExistsException::new);
+        account.addFavorite(idFavorite);
+        Set<String> favorites = account.getFavorites();
+        System.out.println(favorites.size());
+        userAccountingRepository.save(account);
 
-    @Override
-    public Set<String> removeFavorite(String xToken, String login, String id) {
-        Set<String> favorite = new HashSet<>();
-        try{
-            if (tokenProvider.validateToken(xToken)){
-                UserAccount userAccount = userAccountingRepository.findById(login).orElseThrow(UserExistsException::new);
-                System.out.println(userAccount);
-                userAccount.removeFavorite(id);
-                favorite = userAccount.getFavorites();
-                userAccountingRepository.save(userAccount);
-            }
-        }catch (TokenAuthenticationException e){
-            throw new TokenAuthenticationException(e.getMessage());
-        }
-        return favorite;
-    }
-
-    @Override
-    public Set<String> getFavorite(String xToken, String login) {
-        Set<String> favorites = new HashSet<>();
-        try{
-           if (tokenProvider.validateToken(xToken)){
-               UserAccount userAccount = userAccountingRepository.findById(login).orElseThrow(UserExistsException::new);
-               favorites = userAccount.getFavorites();
-           }
-        }catch (TokenAuthenticationException e){
-            throw new TokenAuthenticationException(e.getMessage());
-        }
         return favorites;
     }
 
     @Override
-    public boolean tokenValidator(String xToken) {
-        try {
-            return tokenProvider.validateToken(xToken);
-        }catch (Exception e){
-            return false;
-        }
+    public Set<String> removeFavorite(String xToken, String login, String id) {
+        UserAccount userAccount = userAccountingRepository.findById(login).orElseThrow(UserExistsException::new);
+        userAccount.removeFavorite(id);
+        userAccountingRepository.save(userAccount);
+        return userAccount.getFavorites();
+    }
 
+    @Override
+    public Set<String> getFavorite(String xToken, String login) {
+        UserAccount userAccount = userAccountingRepository.findById(login).orElseThrow(UserExistsException::new);
+        return userAccount.getFavorites();
+    }
+
+    @Override
+    public boolean tokenValidator(String xToken) throws AuthenticationException {
+        return tokenProvider.validateToken(xToken);
+    }
+
+    @Override
+    public ResponseEntity<String> updateToken(String xToken) {
+        Claims userClaims = tokenProvider.decodeJWT(xToken);
+        UserAccount user = userAccountingRepository.findById(userClaims.getId()).orElseThrow(UserExistsException::new);
+        Set<String> roles = user.getRoles();
+        String token = tokenProvider.createJWT(userClaims.getId(), roles);
+        HttpHeaders headers = new HttpHeaders();
+        headers.set("X-Token", token);
+        return ResponseEntity.ok()
+                .headers(headers).build();
     }
 
 }

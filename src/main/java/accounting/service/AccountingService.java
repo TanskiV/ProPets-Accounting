@@ -4,8 +4,10 @@ import accounting.dto.BlockDto;
 import accounting.dto.EditUserDto;
 import accounting.dto.NewUserDto;
 import accounting.dto.ProfileUserDto;
+import io.jsonwebtoken.Claims;
 import org.springframework.http.ResponseEntity;
 
+import javax.naming.AuthenticationException;
 import java.util.Set;
 
 public interface AccountingService {
@@ -31,6 +33,8 @@ public interface AccountingService {
 
 	Set<String> getFavorite(String xToken, String login);
 
-	boolean tokenValidator( String xToken);
+	boolean tokenValidator( String xToken) throws AuthenticationException;
+
+	ResponseEntity<String>  updateToken(String xToken);
 
 }

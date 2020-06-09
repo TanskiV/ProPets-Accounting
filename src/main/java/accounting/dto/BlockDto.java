@@ -1,10 +1,12 @@
 package accounting.dto;
 
-import lombok.Getter;
-import lombok.Setter;
+import lombok.*;
 
 @Setter
 @Getter
+@Builder
+@NoArgsConstructor
+@AllArgsConstructor
 public class BlockDto {
 	String login;
 	boolean block;

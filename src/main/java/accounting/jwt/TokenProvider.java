@@ -8,6 +8,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
 import javax.crypto.spec.SecretKeySpec;
+import javax.naming.AuthenticationException;
 import javax.xml.bind.DatatypeConverter;
 import java.nio.charset.StandardCharsets;
 import java.security.Key;
@@ -45,8 +46,17 @@ public class TokenProvider {
         return builder.compact();
     }
 
+    public Claims decodeJWT(String jwt) {
+        Claims claims = Jwts.parser()
+                .setSigningKey(DatatypeConverter.parseBase64Binary(SECRET_KEY))
+                .parseClaimsJws(jwt).getBody();
 
-    public boolean validateToken(String token) {
+        System.out.println(claims.getId() + claims.getAudience());
+        return claims;
+    }
+
+
+    public boolean validateToken(String token) throws TokenAuthenticationException, AuthenticationException {
         try {
             Jws<Claims> claims = Jwts.parser().setSigningKey(SECRET_KEY).parseClaimsJws(token);
             if (claims.getBody().getExpiration().before(new Date(System.currentTimeMillis()))) {
@@ -54,8 +64,9 @@ public class TokenProvider {
             }
             return true;
         } catch (JwtException | IllegalArgumentException e) {
-            throw new TokenAuthenticationException("JWT token is expired or invalid");
+            return false;
         }
+
     }
 
     public String getEmailFromBasicToken(String basicToken) {
