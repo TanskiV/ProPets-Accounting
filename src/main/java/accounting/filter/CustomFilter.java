@@ -29,25 +29,19 @@ public class CustomFilter extends GenericFilterBean {
 
     @Autowired
     TokenProvider tokenProvider;
-    private Claims claimsToken;
 
 
     @Override
     public void doFilter(ServletRequest request, ServletResponse response, FilterChain chain) throws IOException, ServletException {
         HttpServletRequest req = (HttpServletRequest) request;
         String token = req.getHeader("X-Token");
-
         if (!req.getMethod().equals(RequestMethod.POST.toString())) {
             String idFromPath = req.getServletPath().split("/")[4];
             Claims claimsToken = tokenProvider.decodeJWT(token);
-            try {
-                if (tokenProvider.validateToken(token) && idFromPath.equals(claimsToken.getId())) {
-                    chain.doFilter(request, response);
-                } else {
-                    ((HttpServletResponse) response).sendError(HttpServletResponse.SC_FORBIDDEN, "Token not a valid");
-                }
-            } catch (AuthenticationException e) {
-                e.printStackTrace();
+            if (tokenProvider.validateToken(token) && idFromPath.equals(claimsToken.getId()) || idFromPath.equals("validation")) {
+                chain.doFilter(request, response);
+            } else {
+                ((HttpServletResponse) response).sendError(HttpServletResponse.SC_FORBIDDEN, "Token not a valid");
             }
         } else {
             chain.doFilter(request, response);

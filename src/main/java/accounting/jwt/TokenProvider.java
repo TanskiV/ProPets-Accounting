@@ -54,7 +54,8 @@ public class TokenProvider {
     }
 
 
-    public boolean validateToken(String token) throws TokenAuthenticationException, AuthenticationException {
+    public boolean validateToken(String token) throws TokenAuthenticationException {
+        System.out.println(token);
         try {
             Jws<Claims> claims = Jwts.parser().setSigningKey(SECRET_KEY).parseClaimsJws(token);
             if (claims.getBody().getExpiration().before(new Date(System.currentTimeMillis()))) {
@@ -70,11 +71,9 @@ public class TokenProvider {
     public String getEmailFromBasicToken(String basicToken) {
         String email = "";
         if (basicToken != null && basicToken.toLowerCase().startsWith("basic")) {
-            // Authorization: Basic base64credentials
             String base64Credentials = basicToken.substring("Basic".length()).trim();
             byte[] credDecoded = Base64.getDecoder().decode(base64Credentials);
             String credentials = new String(credDecoded, StandardCharsets.UTF_8);
-            // credentials = username:password
             final String[] values = credentials.split(":", 2);
             email = values[0];
             return email;
