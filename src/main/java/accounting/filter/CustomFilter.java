@@ -2,26 +2,20 @@ package accounting.filter;
 
 import accounting.jwt.TokenProvider;
 import io.jsonwebtoken.Claims;
-import io.jsonwebtoken.impl.DefaultClaims;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.Ordered;
 import org.springframework.core.annotation.Order;
 import org.springframework.stereotype.Component;
 import org.springframework.web.bind.annotation.RequestMethod;
 import org.springframework.web.filter.GenericFilterBean;
-import org.springframework.web.servlet.HandlerMapping;
 
-import javax.naming.AuthenticationException;
 import javax.servlet.FilterChain;
 import javax.servlet.ServletException;
 import javax.servlet.ServletRequest;
 import javax.servlet.ServletResponse;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
-import javax.websocket.server.PathParam;
 import java.io.IOException;
-import java.util.Enumeration;
-import java.util.Map;
 
 @Component
 @Order(Ordered.HIGHEST_PRECEDENCE)
