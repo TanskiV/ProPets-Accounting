@@ -47,9 +47,15 @@ public class TokenProvider {
     }
 
     public Claims decodeJWT(String jwt) {
-        Claims claims = Jwts.parser()
-                .setSigningKey(DatatypeConverter.parseBase64Binary(SECRET_KEY))
-                .parseClaimsJws(jwt).getBody();
+        Claims claims = null;
+        try {
+             claims = Jwts.parser()
+                    .setSigningKey(DatatypeConverter.parseBase64Binary(SECRET_KEY))
+                    .parseClaimsJws(jwt).getBody();  
+        }catch (Exception e){
+            
+        }
+
         return claims;
     }
 
