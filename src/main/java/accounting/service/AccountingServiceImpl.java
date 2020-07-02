@@ -45,7 +45,6 @@ public class AccountingServiceImpl implements AccountingService {
         } else {
             throw new TokenAuthenticationException("Bad json");
         }
-        System.out.println(data);
         String token = Base64.encode(data.getBytes());
         UserAccount account = new UserAccount("", newUserDto.getName(), newUserDto.getEmail(),
                 "", token, false, new HashSet<>(), new HashSet<>());
@@ -55,13 +54,6 @@ public class AccountingServiceImpl implements AccountingService {
         userAccountingRepository.save(account);
 
         return profileUserToProfileUserDto(account);
-
-    }
-
-    private ProfileUserDto profileUserToProfileUserDto(UserAccount account) {
-        return ProfileUserDto.builder()
-                .email(account.getEmail()).avatar(account.getAvatar()).block(account.isBlock())
-                .name(account.getName()).phone(account.getPhone()).roles(account.getRoles()).build();
 
     }
 
@@ -94,97 +86,124 @@ public class AccountingServiceImpl implements AccountingService {
     }
 
     @Override
-    public ProfileUserDto userInfo(String xToken, String login) {
+    public ResponseEntity<ProfileUserDto> userInfo(String xToken, String login) {
         UserAccount user = userAccountingRepository.findById(login).orElseThrow(UserExistsException::new);
-        return profileUserToProfileUserDto(user);
+        ResponseEntity<ProfileUserDto> response = ResponseEntity.ok(profileUserToProfileUserDto(user));
+        response.getHeaders().set("X-Token", xToken);
+        return response;
     }
 
     @Override
-    public ProfileUserDto editUser(String token, EditUserDto editUserDto, String login) {
+    public ResponseEntity<ProfileUserDto> editUser(String token, EditUserDto editUserDto, String login) {
         UserAccount user = userAccountingRepository.findById(login).orElseThrow(UserExistsException::new);
         user.setAvatar(editUserDto.getAvatar());
         user.setName(editUserDto.getName());
         user.setPhone(editUserDto.getPhone());
         userAccountingRepository.save(user);
-        return profileUserToProfileUserDto(user);
+        ResponseEntity<ProfileUserDto> response = ResponseEntity.ok(profileUserToProfileUserDto(user));
+        response.getHeaders().set("X-Token", token);
+        return response;
     }
 
     @Override
-    public ProfileUserDto removeUser(String xToken, String login) {
+    public ResponseEntity<ProfileUserDto> removeUser(String xToken, String login) {
         UserAccount user = userAccountingRepository.findById(login).orElseThrow(UserExistsException::new);
         userAccountingRepository.delete(user);
-        return profileUserToProfileUserDto(user);
+        ResponseEntity<ProfileUserDto> response = ResponseEntity.ok(profileUserToProfileUserDto(user));
+        response.getHeaders().set("X-Token", xToken);
+        return response;
     }
 
     @Override
-    public Set<String> addRoles(String xToken, String login, String role) {
+    public ResponseEntity<Set<String>> addRoles(String xToken, String login, String role) {
         UserAccount account = userAccountingRepository.findById(login).orElseThrow(UserExistsException::new);
         account.addRole(role);
         userAccountingRepository.save(account);
-        return account.getRoles();
+        ResponseEntity<Set<String>> response = ResponseEntity.ok(account.getRoles());
+        response.getHeaders().set("X-Token", xToken);
+        return response;
     }
 
     @Override
-    public Set<String> removeRoles(String xToken, String login, String role) {
+    public ResponseEntity<Set<String>> removeRoles(String xToken, String login, String role) {
         UserAccount user = userAccountingRepository.findById(login).orElseThrow(UserExistsException::new);
         user.removeRole(role);
         userAccountingRepository.save(user);
-        return user.getRoles();
+        ResponseEntity<Set<String>> response = ResponseEntity.ok(user.getRoles());
+        response.getHeaders().set("X-Token", xToken);
+        return response;
     }
 
     @Override
-    public BlockDto blockAccount(String xToken, String login, boolean status) {
+    public ResponseEntity<BlockDto> blockAccount(String xToken, String login, boolean status) {
         UserAccount userAccount = userAccountingRepository.findById(login).orElseThrow(UserExistsException::new);
         userAccount.setBlock(status);
         userAccountingRepository.save(userAccount);
-
-        return new BlockDto().builder()
-                .login(userAccount.getEmail())
-                .block(userAccount.isBlock()).build();
+    ResponseEntity<BlockDto> response = ResponseEntity.ok(new BlockDto().builder()
+                                                            .login(userAccount.getEmail())
+                                                            .block(userAccount.isBlock()).build());
+    response.getHeaders().set("X-Token", xToken);
+        return response;
     }
 
     @Override
-    public Set<String> addFavorite(String xToken, String login, String idFavorite) {
+    public ResponseEntity<Set<String>> addFavorite(String xToken, String login, String idFavorite) {
         UserAccount account = userAccountingRepository.findById(login).orElseThrow(UserExistsException::new);
         account.addFavorite(idFavorite);
         Set<String> favorites = account.getFavorites();
         System.out.println(favorites.size());
         userAccountingRepository.save(account);
-
-        return favorites;
+        ResponseEntity<Set<String>> response = ResponseEntity.ok(favorites);
+        response.getHeaders().set("X-Token", xToken);
+        return response;
     }
 
     @Override
-    public Set<String> removeFavorite(String xToken, String login, String id) {
+    public ResponseEntity<Set<String>> removeFavorite(String xToken, String login, String id) {
         UserAccount userAccount = userAccountingRepository.findById(login).orElseThrow(UserExistsException::new);
         userAccount.removeFavorite(id);
         userAccountingRepository.save(userAccount);
-        return userAccount.getFavorites();
+        ResponseEntity<Set<String>> response = ResponseEntity.ok(userAccount.getFavorites());
+        response.getHeaders().set("X-Token", xToken);
+        return response;
     }
 
     @Override
-    public Set<String> getFavorite(String xToken, String login) {
+    public ResponseEntity<Set<String>> getFavorite(String xToken, String login) {
         UserAccount userAccount = userAccountingRepository.findById(login).orElseThrow(UserExistsException::new);
-        return userAccount.getFavorites();
+        ResponseEntity<Set<String>> response = ResponseEntity.ok(userAccount.getFavorites());
+        response.getHeaders().set("X-Token", xToken);
+        return response;
     }
 
     @Override
-    public boolean tokenValidator(String xToken) throws AuthenticationException {
+    public boolean tokenValidator(String xToken) {
         return tokenProvider.validateToken(xToken);
     }
 
     @Override
     public ResponseEntity<String> updateToken(String xToken) {
-        Claims userClaims = tokenProvider.decodeJWT(xToken);
-        UserAccount user = userAccountingRepository.findById(userClaims.getId()).orElseThrow(UserExistsException::new);
-        Set<String> roles = user.getRoles();
-        String token = tokenProvider.createJWT(userClaims.getId(), roles);
-        HttpHeaders headers = new HttpHeaders();
-        headers.set("X-Token", token);
-        headers.set("Id", user.getEmail());
-        return ResponseEntity.ok()
-                .headers(headers)
-                .build();
+        if (tokenValidator(xToken)) {
+            Claims userClaims = tokenProvider.decodeJWT(xToken);
+            UserAccount user = userAccountingRepository.findById(userClaims.getId()).orElseThrow(UserExistsException::new);
+            Set<String> roles = user.getRoles();
+            String token = tokenProvider.createJWT(userClaims.getId(), roles);
+            HttpHeaders headers = new HttpHeaders();
+            headers.set("X-Token", token);
+            headers.set("Id", user.getEmail());
+            headers.set("Valid", Boolean.toString(tokenProvider.validateToken(xToken)));
+            return ResponseEntity.ok()
+                    .headers(headers)
+                    .build();
+        } else return ResponseEntity.notFound().eTag("Token not a valid").build();
+
+    }
+
+    private ProfileUserDto profileUserToProfileUserDto(UserAccount account) {
+        return ProfileUserDto.builder()
+                .email(account.getEmail()).avatar(account.getAvatar()).block(account.isBlock())
+                .name(account.getName()).phone(account.getPhone()).roles(account.getRoles()).build();
+
     }
 
 }

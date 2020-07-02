@@ -11,30 +11,30 @@ import javax.naming.AuthenticationException;
 import java.util.Set;
 
 public interface AccountingService {
-	ProfileUserDto register(NewUserDto newUserDto) ;
+    ProfileUserDto register(NewUserDto newUserDto);
 
-	ResponseEntity<String> login(String basicToken) ;
+    ResponseEntity<String> login(String basicToken);
 
-	ProfileUserDto userInfo(String xToken, String login);
+    ResponseEntity<ProfileUserDto> userInfo(String xToken, String login);
 
-	ProfileUserDto editUser(String token,EditUserDto editUserDto, String login);
+    ResponseEntity<ProfileUserDto> editUser(String token, EditUserDto editUserDto, String login);
 
-	ProfileUserDto removeUser(String xToken, String login);
+    ResponseEntity<ProfileUserDto> removeUser(String xToken, String login);
 
-	Set<String> addRoles(String xToken, String login, String role);
+    ResponseEntity<Set<String>> addRoles(String xToken, String login, String role);
 
-	Set<String> removeRoles(String xToken, String login, String role);
+    ResponseEntity<Set<String>> removeRoles(String xToken, String login, String role);
 
-	BlockDto blockAccount(String xToken, String login, boolean status);
+    ResponseEntity<BlockDto> blockAccount(String xToken, String login, boolean status);
 
-	Set<String> addFavorite(String xToken, String login, String id);
+    ResponseEntity<Set<String>> addFavorite(String xToken, String login, String id);
 
-	Set<String> removeFavorite(String xToken, String login, String id);
+    ResponseEntity<Set<String>> removeFavorite(String xToken, String login, String id);
 
-	Set<String> getFavorite(String xToken, String login);
+    ResponseEntity<Set<String>> getFavorite(String xToken, String login);
 
-	boolean tokenValidator( String xToken) throws AuthenticationException;
+    boolean tokenValidator(String xToken) throws AuthenticationException;
 
-	ResponseEntity<String>  updateToken(String xToken);
+    ResponseEntity<String> updateToken(String xToken);
 
 }

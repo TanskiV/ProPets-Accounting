@@ -30,54 +30,54 @@ public class UserAccountingController {
 	}
 
 	@GetMapping("/{lang}/v1/{login}/info")
-	public ProfileUserDto userInfo(@RequestHeader("X-Token") String xToken, @PathVariable("login")String email) {
+	public ResponseEntity<ProfileUserDto> userInfo(@RequestHeader("X-Token") String xToken, @PathVariable("login")String email) {
 		return accountingService.userInfo(xToken, email);
 	}
 
 	@PutMapping("/{lang}/v1/{login}")
-	public ProfileUserDto editUser(@RequestHeader("X-Token") String xToken, @RequestBody EditUserDto editUserDto, @PathVariable("login")String login) {
+	public ResponseEntity<ProfileUserDto> editUser(@RequestHeader("X-Token") String xToken, @RequestBody EditUserDto editUserDto, @PathVariable("login")String login) {
 		return accountingService.editUser(xToken, editUserDto, login);
 	}
 
 	@DeleteMapping("/{lang}/v1/{login}")
-	public ProfileUserDto removeUser(@RequestHeader("X-Token") String xToken , @PathVariable("login")String login) {
+	public ResponseEntity<ProfileUserDto> removeUser(@RequestHeader("X-Token") String xToken , @PathVariable("login")String login) {
 		return accountingService.removeUser(xToken, login);
 	}
 
 	@PutMapping("/{lang}/v1/{login}/role/{role}")
-	public Set<String> addUserRole(@RequestHeader("X-Token") String xToken, @PathVariable("login")String login, @PathVariable("role")String role) {
+	public ResponseEntity<Set<String>> addUserRole(@RequestHeader("X-Token") String xToken, @PathVariable("login")String login, @PathVariable("role")String role) {
 		return accountingService.addRoles(xToken, login, role);
 	}
 
 	@DeleteMapping("/{lang}/v1/{login}/role/{role}")
-	public Set<String> removeRole(@RequestHeader("X-Token") String xToken, @PathVariable("login")String login, @PathVariable("role")String role) {
+	public ResponseEntity <Set<String>> removeRole(@RequestHeader("X-Token") String xToken, @PathVariable("login")String login, @PathVariable("role")String role) {
 		return accountingService.removeRoles(xToken, login, role);
 	}
 
 	@PutMapping("/{lang}/v1/{login}/block/{status}")
-	public BlockDto blockUser(@RequestHeader("X-Token") String xToken , @PathVariable("login")String login, @PathVariable("status")boolean status) {
+	public ResponseEntity<BlockDto> blockUser(@RequestHeader("X-Token") String xToken , @PathVariable("login")String login, @PathVariable("status")boolean status) {
 		return accountingService.blockAccount(xToken, login , status);
 	}
 
 	@PutMapping("/{lang}/v1/{login}/favorite/{id}")
-	public Set<String> addFavorite(@RequestHeader("X-Token") String xToken, @PathVariable("login")String login, @PathVariable("id")String id) {
+	public ResponseEntity<Set<String>> addFavorite(@RequestHeader("X-Token") String xToken, @PathVariable("login")String login, @PathVariable("id")String id) {
 		return accountingService.addFavorite(xToken, login , id);
 	}
 
 	@DeleteMapping("/{lang}/v1/{login}/favorite/{id}")
-	public Set<String> removeFavorite(@RequestHeader("X-Token") String xToken , @PathVariable("login")String login, @PathVariable("id")String id) {
+	public ResponseEntity<Set<String>> removeFavorite(@RequestHeader("X-Token") String xToken , @PathVariable("login")String login, @PathVariable("id")String id) {
 		return accountingService.removeFavorite(xToken, login , id);
 	}
 
 	@GetMapping("/{lang}/v1/{login}/favorites")
-	public Set<String> getFavorite(@RequestHeader("X-Token") String xToken, @PathVariable("login")String login) {
+	public ResponseEntity<Set<String>> getFavorite(@RequestHeader("X-Token") String xToken, @PathVariable("login")String login) {
 		return accountingService.getFavorite(xToken, login);
 	}
 
-	@PutMapping("/{lang}/v1/validation")
-	public boolean validateToken(@RequestHeader("X-Token") String xToken) throws AuthenticationException {
-		return accountingService.tokenValidator(xToken);
-	}
+//	@PutMapping("/{lang}/v1/validation")
+//	public boolean validateToken(@RequestHeader("X-Token") String xToken) throws AuthenticationException {
+//		return accountingService.tokenValidator(xToken);
+//	}
 
 	@PutMapping("/{lang}/v1/validation/update")
 	public ResponseEntity<String>  updateToken(@RequestHeader("X-Token") String xToken){
