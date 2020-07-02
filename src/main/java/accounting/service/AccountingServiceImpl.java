@@ -88,9 +88,9 @@ public class AccountingServiceImpl implements AccountingService {
     @Override
     public ResponseEntity<ProfileUserDto> userInfo(String xToken, String login) {
         UserAccount user = userAccountingRepository.findById(login).orElseThrow(UserExistsException::new);
-        ResponseEntity<ProfileUserDto> response = ResponseEntity.ok(profileUserToProfileUserDto(user));
-        response.getHeaders().set("X-Token", xToken);
-        return response;
+        HttpHeaders header = new HttpHeaders();
+        header.set("X-Token", xToken);
+        return ResponseEntity.ok().headers(header).body(profileUserToProfileUserDto(user));
     }
 
     @Override
@@ -100,18 +100,18 @@ public class AccountingServiceImpl implements AccountingService {
         user.setName(editUserDto.getName());
         user.setPhone(editUserDto.getPhone());
         userAccountingRepository.save(user);
-        ResponseEntity<ProfileUserDto> response = ResponseEntity.ok(profileUserToProfileUserDto(user));
-        response.getHeaders().set("X-Token", token);
-        return response;
+        HttpHeaders header = new HttpHeaders();
+        header.set("X-Token", token);
+        return ResponseEntity.ok().headers(header).body(profileUserToProfileUserDto(user));
     }
 
     @Override
     public ResponseEntity<ProfileUserDto> removeUser(String xToken, String login) {
         UserAccount user = userAccountingRepository.findById(login).orElseThrow(UserExistsException::new);
         userAccountingRepository.delete(user);
-        ResponseEntity<ProfileUserDto> response = ResponseEntity.ok(profileUserToProfileUserDto(user));
-        response.getHeaders().set("X-Token", xToken);
-        return response;
+        HttpHeaders header = new HttpHeaders();
+        header.set("X-Token", xToken);
+        return ResponseEntity.ok().headers(header).body(profileUserToProfileUserDto(user));
     }
 
     @Override
@@ -119,9 +119,10 @@ public class AccountingServiceImpl implements AccountingService {
         UserAccount account = userAccountingRepository.findById(login).orElseThrow(UserExistsException::new);
         account.addRole(role);
         userAccountingRepository.save(account);
-        ResponseEntity<Set<String>> response = ResponseEntity.ok(account.getRoles());
-        response.getHeaders().set("X-Token", xToken);
-        return response;
+        HttpHeaders header = new HttpHeaders();
+        header.set("X-Token", xToken);
+        return ResponseEntity.ok().headers(header).body(account.getRoles());
+
     }
 
     @Override
@@ -129,9 +130,9 @@ public class AccountingServiceImpl implements AccountingService {
         UserAccount user = userAccountingRepository.findById(login).orElseThrow(UserExistsException::new);
         user.removeRole(role);
         userAccountingRepository.save(user);
-        ResponseEntity<Set<String>> response = ResponseEntity.ok(user.getRoles());
-        response.getHeaders().set("X-Token", xToken);
-        return response;
+        HttpHeaders header = new HttpHeaders();
+        header.set("X-Token", xToken);
+        return ResponseEntity.ok().headers(header).body(user.getRoles());
     }
 
     @Override
@@ -139,11 +140,12 @@ public class AccountingServiceImpl implements AccountingService {
         UserAccount userAccount = userAccountingRepository.findById(login).orElseThrow(UserExistsException::new);
         userAccount.setBlock(status);
         userAccountingRepository.save(userAccount);
-    ResponseEntity<BlockDto> response = ResponseEntity.ok(new BlockDto().builder()
-                                                            .login(userAccount.getEmail())
-                                                            .block(userAccount.isBlock()).build());
-    response.getHeaders().set("X-Token", xToken);
-        return response;
+        HttpHeaders header = new HttpHeaders();
+        header.set("X-Token", xToken);
+        BlockDto blockDto = new BlockDto().builder()
+                .login(userAccount.getEmail())
+                .block(userAccount.isBlock()).build();
+        return ResponseEntity.ok().headers(header).body(blockDto);
     }
 
     @Override
@@ -153,9 +155,9 @@ public class AccountingServiceImpl implements AccountingService {
         Set<String> favorites = account.getFavorites();
         System.out.println(favorites.size());
         userAccountingRepository.save(account);
-        ResponseEntity<Set<String>> response = ResponseEntity.ok(favorites);
-        response.getHeaders().set("X-Token", xToken);
-        return response;
+        HttpHeaders header = new HttpHeaders();
+        header.set("X-Token", xToken);
+        return ResponseEntity.ok().headers(header).body(favorites);
     }
 
     @Override
@@ -163,27 +165,22 @@ public class AccountingServiceImpl implements AccountingService {
         UserAccount userAccount = userAccountingRepository.findById(login).orElseThrow(UserExistsException::new);
         userAccount.removeFavorite(id);
         userAccountingRepository.save(userAccount);
-        ResponseEntity<Set<String>> response = ResponseEntity.ok(userAccount.getFavorites());
-        response.getHeaders().set("X-Token", xToken);
-        return response;
+        HttpHeaders header = new HttpHeaders();
+        header.set("X-Token", xToken);
+        return ResponseEntity.ok().headers(header).body(userAccount.getFavorites());
     }
 
     @Override
     public ResponseEntity<Set<String>> getFavorite(String xToken, String login) {
         UserAccount userAccount = userAccountingRepository.findById(login).orElseThrow(UserExistsException::new);
-        ResponseEntity<Set<String>> response = ResponseEntity.ok(userAccount.getFavorites());
-        response.getHeaders().set("X-Token", xToken);
-        return response;
-    }
-
-    @Override
-    public boolean tokenValidator(String xToken) {
-        return tokenProvider.validateToken(xToken);
+        HttpHeaders header = new HttpHeaders();
+        header.set("X-Token", xToken);
+        return ResponseEntity.ok().headers(header).body(userAccount.getFavorites());
     }
 
     @Override
     public ResponseEntity<String> updateToken(String xToken) {
-        if (tokenValidator(xToken)) {
+        if (tokenProvider.validateToken(xToken)) {
             Claims userClaims = tokenProvider.decodeJWT(xToken);
             UserAccount user = userAccountingRepository.findById(userClaims.getId()).orElseThrow(UserExistsException::new);
             Set<String> roles = user.getRoles();

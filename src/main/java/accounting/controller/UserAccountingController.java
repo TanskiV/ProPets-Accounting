@@ -74,10 +74,6 @@ public class UserAccountingController {
 		return accountingService.getFavorite(xToken, login);
 	}
 
-//	@PutMapping("/{lang}/v1/validation")
-//	public boolean validateToken(@RequestHeader("X-Token") String xToken) throws AuthenticationException {
-//		return accountingService.tokenValidator(xToken);
-//	}
 
 	@PutMapping("/{lang}/v1/validation/update")
 	public ResponseEntity<String>  updateToken(@RequestHeader("X-Token") String xToken){

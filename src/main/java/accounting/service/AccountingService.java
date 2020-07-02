@@ -33,8 +33,6 @@ public interface AccountingService {
 
     ResponseEntity<Set<String>> getFavorite(String xToken, String login);
 
-    boolean tokenValidator(String xToken) throws AuthenticationException;
-
     ResponseEntity<String> updateToken(String xToken);
 
 }
