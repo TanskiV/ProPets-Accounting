@@ -5,27 +5,23 @@ import accounting.dto.BlockDto;
 import accounting.dto.EditUserDto;
 import accounting.dto.NewUserDto;
 import accounting.dto.ProfileUserDto;
-import accounting.exeptions.TokenAuthenticationException;
-import accounting.exeptions.UserExistsException;
+import accounting.exceptions.UserNotExistsException;
 import accounting.jwt.TokenProvider;
 import accounting.model.UserAccount;
 import com.google.gson.Gson;
 import io.jsonwebtoken.Claims;
-import org.apache.catalina.connector.Response;
 import org.bson.internal.Base64;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
+import org.springframework.web.server.ResponseStatusException;
 
-import javax.naming.AuthenticationException;
-import javax.servlet.http.HttpServletResponse;
-import java.util.Arrays;
-import java.util.Collections;
+import javax.mail.internet.AddressException;
+import javax.mail.internet.InternetAddress;
 import java.util.HashSet;
 import java.util.Set;
-import java.util.stream.Collectors;
 
 
 @Service
@@ -38,42 +34,40 @@ public class AccountingServiceImpl implements AccountingService {
     TokenProvider tokenProvider;
 
     @Override
-    public ProfileUserDto register(NewUserDto newUserDto) {
-        String data = "";
-        if (newUserDto.getPassword() != null && newUserDto.getEmail() != null) {
-            data = newUserDto.getEmail() + ":" + newUserDto.getPassword();
-        } else {
-            throw new TokenAuthenticationException("Bad json");
+    public ResponseEntity<ProfileUserDto> register(NewUserDto newUserDto)  {
+        String userData = null;
+     //Check email valid
+        if(!isEmail(newUserDto.getEmail())){
+            throw new ResponseStatusException(HttpStatus.valueOf(400), "Bad email");
         }
-        String token = Base64.encode(data.getBytes());
-        UserAccount account = new UserAccount("", newUserDto.getName(), newUserDto.getEmail(),
+        if (newUserDto.getPassword().length() != 0) {
+            userData = newUserDto.getEmail() + ":" + newUserDto.getPassword();
+        } else {
+            throw new ResponseStatusException(HttpStatus.valueOf(400), "Request with password");
+        }
+        String token = Base64.encode(userData.getBytes());
+        UserAccount account = new UserAccount("", newUserDto.getName(), newUserDto.getEmail().toLowerCase(),
                 "", token, false, new HashSet<>(), new HashSet<>());
         if (userAccountingRepository.existsById(newUserDto.getEmail())) {
-            throw new UserExistsException();
+            throw new ResponseStatusException(HttpStatus.valueOf(400), "User exist");
         }
         userAccountingRepository.save(account);
 
-        return profileUserToProfileUserDto(account);
+        return ResponseEntity.ok(profileUserToProfileUserDto(account));
 
     }
+
 
     @Override
     public ResponseEntity<String> login(String basicToken) {
         String base64Credentials = basicToken.substring("Basic".length()).trim();
         String email = tokenProvider.getEmailFromBasicToken(basicToken);
-        ProfileUserDto profileUserDto = new ProfileUserDto();
-        if (email != null) {
-            if (!userAccountingRepository.existsById(email)) {
-                throw new UserExistsException();
+        UserAccount account = userAccountingRepository.findById(email).orElseThrow(UserNotExistsException::new);
+            if (!account.getBasicToken().equals(base64Credentials) ) {
+                throw new ResponseStatusException(HttpStatus.valueOf(400), "Request with bad Authentication param");
             }
-            UserAccount account = userAccountingRepository.findById(email).orElse(null);
-            if (account.getBasicToken().equals(base64Credentials)) {
-                profileUserDto = new ProfileUserDto(account.getAvatar(), account.getName(),
-                        account.getEmail(), account.getPhone(), account.isBlock(), account.getRoles());
-            } else {
-                throw new TokenAuthenticationException("token not valid");
-            }
-        }
+       ProfileUserDto profileUserDto = new ProfileUserDto(account.getAvatar(), account.getName(),
+                account.getEmail(), account.getPhone(), account.isBlock(), account.getRoles());
         Gson json = new Gson();
         String jsonResponse = json.toJson(profileUserDto);
         String token = tokenProvider.createJWT(profileUserDto.getEmail(), profileUserDto.getRoles());
@@ -87,102 +81,123 @@ public class AccountingServiceImpl implements AccountingService {
 
     @Override
     public ResponseEntity<ProfileUserDto> userInfo(String xToken, String login) {
-        UserAccount user = userAccountingRepository.findById(login).orElseThrow(UserExistsException::new);
+        UserAccount user = userAccountingRepository.findById(login).orElseThrow(UserNotExistsException::new);
         HttpHeaders header = new HttpHeaders();
-        header.set("X-Token", xToken);
+        String newToken = tokenProvider.createJWT(user.getEmail(), user.getRoles());
+        header.set("X-Token", newToken);
         return ResponseEntity.ok().headers(header).body(profileUserToProfileUserDto(user));
     }
 
     @Override
     public ResponseEntity<ProfileUserDto> editUser(String token, EditUserDto editUserDto, String login) {
-        UserAccount user = userAccountingRepository.findById(login).orElseThrow(UserExistsException::new);
+      UserAccount user = checkAccess(token, login);
+        if (user == null){
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "User not owner and not administrator");
+        }
         user.setAvatar(editUserDto.getAvatar());
         user.setName(editUserDto.getName());
         user.setPhone(editUserDto.getPhone());
         userAccountingRepository.save(user);
         HttpHeaders header = new HttpHeaders();
-        header.set("X-Token", token);
+        String newToken = tokenProvider.createJWT(user.getEmail(), user.getRoles());
+        header.set("X-Token", newToken);
         return ResponseEntity.ok().headers(header).body(profileUserToProfileUserDto(user));
+    }
+
+    private UserAccount checkAccess(String token, String login) {
+        UserAccount check = null;
+        String userId = tokenProvider.decodeJWT(token).getId();
+        UserAccount user = userAccountingRepository.findById(userId.toLowerCase()).orElseThrow(UserNotExistsException::new);
+        if (user.getRoles().contains("SUPER_USER")|| userId.equals(login)){
+            check = user;
+        }
+        return check;
     }
 
     @Override
     public ResponseEntity<ProfileUserDto> removeUser(String xToken, String login) {
-        UserAccount user = userAccountingRepository.findById(login).orElseThrow(UserExistsException::new);
+        UserAccount user = userAccountingRepository.findById(login.toLowerCase()).orElseThrow(UserNotExistsException::new);
         userAccountingRepository.delete(user);
         HttpHeaders header = new HttpHeaders();
-        header.set("X-Token", xToken);
+        String newToken = tokenProvider.createJWT(user.getEmail(), user.getRoles());
+        header.set("X-Token", newToken);
         return ResponseEntity.ok().headers(header).body(profileUserToProfileUserDto(user));
     }
 
     @Override
     public ResponseEntity<Set<String>> addRoles(String xToken, String login, String role) {
-        UserAccount account = userAccountingRepository.findById(login).orElseThrow(UserExistsException::new);
-        account.addRole(role);
-        userAccountingRepository.save(account);
+        UserAccount user = userAccountingRepository.findById(login.toLowerCase()).orElseThrow(UserNotExistsException::new);
+        user.addRole(role.toUpperCase());
+        userAccountingRepository.save(user);
         HttpHeaders header = new HttpHeaders();
+        String newToken = tokenProvider.createJWT(user.getEmail(), user.getRoles());
         header.set("X-Token", xToken);
-        return ResponseEntity.ok().headers(header).body(account.getRoles());
+        return ResponseEntity.ok().headers(header).body(user.getRoles());
 
     }
 
     @Override
     public ResponseEntity<Set<String>> removeRoles(String xToken, String login, String role) {
-        UserAccount user = userAccountingRepository.findById(login).orElseThrow(UserExistsException::new);
-        user.removeRole(role);
+        UserAccount user = userAccountingRepository.findById(login.toLowerCase()).orElseThrow(UserNotExistsException::new);
+        user.removeRole(role.toUpperCase());
         userAccountingRepository.save(user);
         HttpHeaders header = new HttpHeaders();
-        header.set("X-Token", xToken);
+        String newToken = tokenProvider.createJWT(user.getEmail(), user.getRoles());
+        header.set("X-Token", newToken);
         return ResponseEntity.ok().headers(header).body(user.getRoles());
     }
 
     @Override
     public ResponseEntity<BlockDto> blockAccount(String xToken, String login, boolean status) {
-        UserAccount userAccount = userAccountingRepository.findById(login).orElseThrow(UserExistsException::new);
-        userAccount.setBlock(status);
-        userAccountingRepository.save(userAccount);
+        UserAccount user = userAccountingRepository.findById(login.toLowerCase()).orElseThrow(UserNotExistsException::new);
+        user.setBlock(status);
+        userAccountingRepository.save(user);
         HttpHeaders header = new HttpHeaders();
+        String newToken = tokenProvider.createJWT(user.getEmail(), user.getRoles());
         header.set("X-Token", xToken);
         BlockDto blockDto = new BlockDto().builder()
-                .login(userAccount.getEmail())
-                .block(userAccount.isBlock()).build();
+                .login(user.getEmail())
+                .block(user.isBlock()).build();
         return ResponseEntity.ok().headers(header).body(blockDto);
     }
 
     @Override
     public ResponseEntity<Set<String>> addFavorite(String xToken, String login, String idFavorite) {
-        UserAccount account = userAccountingRepository.findById(login).orElseThrow(UserExistsException::new);
-        account.addFavorite(idFavorite);
-        Set<String> favorites = account.getFavorites();
-        System.out.println(favorites.size());
-        userAccountingRepository.save(account);
+        UserAccount user = userAccountingRepository.findById(login.toLowerCase()).orElseThrow(UserNotExistsException::new);
+        user.addFavorite(idFavorite);
+        Set<String> favorites = user.getFavorites();
+        userAccountingRepository.save(user);
         HttpHeaders header = new HttpHeaders();
-        header.set("X-Token", xToken);
+        String newToken = tokenProvider.createJWT(user.getEmail(), user.getRoles());
+        header.set("X-Token", newToken);
         return ResponseEntity.ok().headers(header).body(favorites);
     }
 
     @Override
     public ResponseEntity<Set<String>> removeFavorite(String xToken, String login, String id) {
-        UserAccount userAccount = userAccountingRepository.findById(login).orElseThrow(UserExistsException::new);
-        userAccount.removeFavorite(id);
-        userAccountingRepository.save(userAccount);
+        UserAccount user = userAccountingRepository.findById(login.toLowerCase()).orElseThrow(UserNotExistsException::new);
+        user.removeFavorite(id);
+        userAccountingRepository.save(user);
         HttpHeaders header = new HttpHeaders();
-        header.set("X-Token", xToken);
-        return ResponseEntity.ok().headers(header).body(userAccount.getFavorites());
+        String newToken = tokenProvider.createJWT(user.getEmail(), user.getRoles());
+        header.set("X-Token", newToken);
+        return ResponseEntity.ok().headers(header).body(user.getFavorites());
     }
 
     @Override
     public ResponseEntity<Set<String>> getFavorite(String xToken, String login) {
-        UserAccount userAccount = userAccountingRepository.findById(login).orElseThrow(UserExistsException::new);
+        UserAccount user = userAccountingRepository.findById(login.toLowerCase()).orElseThrow(UserNotExistsException::new);
         HttpHeaders header = new HttpHeaders();
-        header.set("X-Token", xToken);
-        return ResponseEntity.ok().headers(header).body(userAccount.getFavorites());
+        String newToken = tokenProvider.createJWT(user.getEmail(), user.getRoles());
+        header.set("X-Token", newToken);
+        return ResponseEntity.ok().headers(header).body(user.getFavorites());
     }
 
     @Override
     public ResponseEntity<String> updateToken(String xToken) {
         if (tokenProvider.validateToken(xToken)) {
             Claims userClaims = tokenProvider.decodeJWT(xToken);
-            UserAccount user = userAccountingRepository.findById(userClaims.getId()).orElseThrow(UserExistsException::new);
+            UserAccount user = userAccountingRepository.findById(userClaims.getId()).orElseThrow(UserNotExistsException::new);
             Set<String> roles = user.getRoles();
             String token = tokenProvider.createJWT(userClaims.getId(), roles);
             HttpHeaders headers = new HttpHeaders();
@@ -200,7 +215,17 @@ public class AccountingServiceImpl implements AccountingService {
         return ProfileUserDto.builder()
                 .email(account.getEmail()).avatar(account.getAvatar()).block(account.isBlock())
                 .name(account.getName()).phone(account.getPhone()).roles(account.getRoles()).build();
+    }
 
+    private boolean isEmail(String email) {
+        boolean result = true;
+        try {
+            InternetAddress   emailAdr = new InternetAddress(email);
+            emailAdr.validate();
+        } catch (AddressException e) {
+            result = false;
+        }
+        return result;
     }
 
 }

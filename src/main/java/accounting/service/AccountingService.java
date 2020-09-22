@@ -4,18 +4,16 @@ import accounting.dto.BlockDto;
 import accounting.dto.EditUserDto;
 import accounting.dto.NewUserDto;
 import accounting.dto.ProfileUserDto;
-import io.jsonwebtoken.Claims;
 import org.springframework.http.ResponseEntity;
 
-import javax.naming.AuthenticationException;
 import java.util.Set;
 
 public interface AccountingService {
-    ProfileUserDto register(NewUserDto newUserDto);
+    ResponseEntity<ProfileUserDto> register(NewUserDto newUserDto);
 
     ResponseEntity<String> login(String basicToken);
 
-    ResponseEntity<ProfileUserDto> userInfo(String xToken, String login);
+    ResponseEntity<ProfileUserDto> userInfo(String xToken, String login) ;
 
     ResponseEntity<ProfileUserDto> editUser(String token, EditUserDto editUserDto, String login);
 

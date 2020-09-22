@@ -1,14 +1,12 @@
 package accounting.jwt;
 
 
-import accounting.exeptions.TokenAuthenticationException;
 import com.google.gson.Gson;
 import io.jsonwebtoken.*;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
 import javax.crypto.spec.SecretKeySpec;
-import javax.naming.AuthenticationException;
 import javax.xml.bind.DatatypeConverter;
 import java.nio.charset.StandardCharsets;
 import java.security.Key;
@@ -60,7 +58,7 @@ public class TokenProvider {
     }
 
 
-    public boolean validateToken(String token) throws TokenAuthenticationException {
+    public boolean validateToken(String token)  {
         System.out.println(token);
         try {
             Jws<Claims> claims = Jwts.parser().setSigningKey(SECRET_KEY).parseClaimsJws(token);
@@ -81,7 +79,7 @@ public class TokenProvider {
             byte[] credDecoded = Base64.getDecoder().decode(base64Credentials);
             String credentials = new String(credDecoded, StandardCharsets.UTF_8);
             final String[] values = credentials.split(":", 2);
-            email = values[0];
+            email = values[0].toLowerCase();
             return email;
         } else return null;
 
