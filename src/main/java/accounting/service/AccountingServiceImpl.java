@@ -41,7 +41,7 @@ public class AccountingServiceImpl implements AccountingService {
             throw new ResponseStatusException(HttpStatus.valueOf(400), "Bad email");
         }
         if (newUserDto.getPassword().length() != 0) {
-            userData = newUserDto.getEmail() + ":" + newUserDto.getPassword();
+            userData = newUserDto.getEmail().toLowerCase() + ":" + newUserDto.getPassword();
         } else {
             throw new ResponseStatusException(HttpStatus.valueOf(400), "Request with password");
         }
