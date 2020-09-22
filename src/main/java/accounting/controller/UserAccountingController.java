@@ -41,9 +41,9 @@ public class UserAccountingController {
         return accountingService.editUser(xToken, editUserDto, login);
     }
 
-    @DeleteMapping("/{lang}/v1/{login}")
+    @DeleteMapping("/{lang}/v1/")
     public ResponseEntity<ProfileUserDto> removeUser(@RequestHeader("X-Token") String xToken,
-                                                     @PathVariable("login") String login) {
+                                                     @RequestParam("login") String login) {
         return accountingService.removeUser(xToken, login);
     }
 
