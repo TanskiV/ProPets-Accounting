@@ -34,10 +34,10 @@ public class UserAccountingController {
         return accountingService.userInfo(xToken, email);
     }
 
-    @PutMapping("/{lang}/v1/{login}")
+    @PutMapping("/{lang}/v1/")
     public ResponseEntity<ProfileUserDto> editUser(@RequestHeader("X-Token") String xToken,
                                                    @RequestBody EditUserDto editUserDto,
-                                                   @PathVariable("login") String login) {
+                                                   @RequestParam("userId") String login) {
         return accountingService.editUser(xToken, editUserDto, login);
     }
 

@@ -5,6 +5,8 @@ import accounting.dto.BlockDto;
 import accounting.dto.EditUserDto;
 import accounting.dto.NewUserDto;
 import accounting.dto.ProfileUserDto;
+import accounting.exceptions.BadJWTTokenException;
+import accounting.exceptions.ForbiddenAccessException;
 import accounting.exceptions.UserNotExistsException;
 import accounting.jwt.TokenProvider;
 import accounting.model.UserAccount;
@@ -41,7 +43,8 @@ public class AccountingServiceImpl implements AccountingService {
             throw new ResponseStatusException(HttpStatus.valueOf(400), "Bad email");
         }
         if (newUserDto.getPassword().length() != 0) {
-            userData = newUserDto.getEmail().toLowerCase() + ":" + newUserDto.getPassword();
+            String email = newUserDto.getEmail().toLowerCase();
+            userData = email + ":" + newUserDto.getPassword();
         } else {
             throw new ResponseStatusException(HttpStatus.valueOf(400), "Request with password");
         }
@@ -61,13 +64,16 @@ public class AccountingServiceImpl implements AccountingService {
     @Override
     public ResponseEntity<String> login(String basicToken) {
         String base64Credentials = basicToken.substring("Basic".length()).trim();
-        String email = tokenProvider.getEmailFromBasicToken(basicToken);
-        UserAccount account = userAccountingRepository.findById(email).orElseThrow(UserNotExistsException::new);
-            if (!account.getBasicToken().equals(base64Credentials) ) {
+        String[] tempDataFromToken = tokenProvider.getEmailAndPasswordFromBasicToken(basicToken);
+        UserAccount user = userAccountingRepository.findById(tempDataFromToken[0].toLowerCase()).orElseThrow(UserNotExistsException::new);
+        String[] currentDataFromToken = tokenProvider.getEmailAndPasswordFromBasicToken("basic"+user.getBasicToken());
+            if (!tempDataFromToken[0].toLowerCase().equals(currentDataFromToken[0].toLowerCase())
+                    || !tempDataFromToken[1].equals(currentDataFromToken[1]))
+            {
                 throw new ResponseStatusException(HttpStatus.valueOf(400), "Request with bad Authentication param");
             }
-       ProfileUserDto profileUserDto = new ProfileUserDto(account.getAvatar(), account.getName(),
-                account.getEmail(), account.getPhone(), account.isBlock(), account.getRoles());
+       ProfileUserDto profileUserDto = new ProfileUserDto(user.getAvatar(), user.getName(),
+                user.getEmail(), user.getPhone(), user.isBlock(), user.getRoles());
         Gson json = new Gson();
         String jsonResponse = json.toJson(profileUserDto);
         String token = tokenProvider.createJWT(profileUserDto.getEmail(), profileUserDto.getRoles());
@@ -81,7 +87,7 @@ public class AccountingServiceImpl implements AccountingService {
 
     @Override
     public ResponseEntity<ProfileUserDto> userInfo(String xToken, String login) {
-        UserAccount user = userAccountingRepository.findById(login).orElseThrow(UserNotExistsException::new);
+        UserAccount user = userAccountingRepository.findById(login.toLowerCase()).orElseThrow(UserNotExistsException::new);
         HttpHeaders header = new HttpHeaders();
         String newToken = tokenProvider.createJWT(user.getEmail(), user.getRoles());
         header.set("X-Token", newToken);
@@ -92,7 +98,7 @@ public class AccountingServiceImpl implements AccountingService {
     public ResponseEntity<ProfileUserDto> editUser(String token, EditUserDto editUserDto, String login) {
       UserAccount user = checkAccess(token, login);
         if (user == null){
-            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "User not owner and not administrator");
+            throw new ForbiddenAccessException();
         }
         user.setAvatar(editUserDto.getAvatar());
         user.setName(editUserDto.getName());
@@ -104,18 +110,11 @@ public class AccountingServiceImpl implements AccountingService {
         return ResponseEntity.ok().headers(header).body(profileUserToProfileUserDto(user));
     }
 
-    private UserAccount checkAccess(String token, String login) {
-        UserAccount check = null;
-        String userId = tokenProvider.decodeJWT(token).getId();
-        UserAccount user = userAccountingRepository.findById(userId.toLowerCase()).orElseThrow(UserNotExistsException::new);
-        if (user.getRoles().contains("SUPER_USER")|| userId.equals(login)){
-            check = user;
-        }
-        return check;
-    }
-
     @Override
     public ResponseEntity<ProfileUserDto> removeUser(String xToken, String login) {
+        if (checkAccess(xToken, login) == null){
+            throw new ForbiddenAccessException();
+        }
         UserAccount user = userAccountingRepository.findById(login.toLowerCase()).orElseThrow(UserNotExistsException::new);
         userAccountingRepository.delete(user);
         HttpHeaders header = new HttpHeaders();
@@ -126,19 +125,24 @@ public class AccountingServiceImpl implements AccountingService {
 
     @Override
     public ResponseEntity<Set<String>> addRoles(String xToken, String login, String role) {
+        isJWTAdmin(xToken);
         UserAccount user = userAccountingRepository.findById(login.toLowerCase()).orElseThrow(UserNotExistsException::new);
         user.addRole(role.toUpperCase());
         userAccountingRepository.save(user);
         HttpHeaders header = new HttpHeaders();
         String newToken = tokenProvider.createJWT(user.getEmail(), user.getRoles());
-        header.set("X-Token", xToken);
+        header.set("X-Token", newToken);
         return ResponseEntity.ok().headers(header).body(user.getRoles());
 
     }
 
     @Override
     public ResponseEntity<Set<String>> removeRoles(String xToken, String login, String role) {
+        isJWTAdmin(xToken);
         UserAccount user = userAccountingRepository.findById(login.toLowerCase()).orElseThrow(UserNotExistsException::new);
+        if (!user.getRoles().contains(role)){
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "User don't have role "+ role);
+        }
         user.removeRole(role.toUpperCase());
         userAccountingRepository.save(user);
         HttpHeaders header = new HttpHeaders();
@@ -149,6 +153,7 @@ public class AccountingServiceImpl implements AccountingService {
 
     @Override
     public ResponseEntity<BlockDto> blockAccount(String xToken, String login, boolean status) {
+        isJWTAdmin(xToken);
         UserAccount user = userAccountingRepository.findById(login.toLowerCase()).orElseThrow(UserNotExistsException::new);
         user.setBlock(status);
         userAccountingRepository.save(user);
@@ -163,6 +168,13 @@ public class AccountingServiceImpl implements AccountingService {
 
     @Override
     public ResponseEntity<Set<String>> addFavorite(String xToken, String login, String idFavorite) {
+        if (checkAccess(xToken, login) == null){
+            throw new ForbiddenAccessException();
+        }
+        if( !userAccountingRepository.existsById(idFavorite.toLowerCase()) ){
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Favorite user with id "+idFavorite
+            +" not found");
+        }
         UserAccount user = userAccountingRepository.findById(login.toLowerCase()).orElseThrow(UserNotExistsException::new);
         user.addFavorite(idFavorite);
         Set<String> favorites = user.getFavorites();
@@ -175,7 +187,13 @@ public class AccountingServiceImpl implements AccountingService {
 
     @Override
     public ResponseEntity<Set<String>> removeFavorite(String xToken, String login, String id) {
+        if (checkAccess(xToken, login) == null){
+            throw new ForbiddenAccessException();
+        }
         UserAccount user = userAccountingRepository.findById(login.toLowerCase()).orElseThrow(UserNotExistsException::new);
+        if (!user.getFavorites().contains(id)){
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "User " + login + " don't have in favorite " + id);
+        }
         user.removeFavorite(id);
         userAccountingRepository.save(user);
         HttpHeaders header = new HttpHeaders();
@@ -226,6 +244,34 @@ public class AccountingServiceImpl implements AccountingService {
             result = false;
         }
         return result;
+    }
+
+    private UserAccount checkAccess(String XToken, String login) {
+        UserAccount check = null;
+        String userId = "";
+        try {
+             userId = tokenProvider.decodeJWT(XToken).getId();
+        }catch (Exception e){
+            throw new BadJWTTokenException();
+        }
+        UserAccount user = userAccountingRepository.findById(userId.toLowerCase()).orElseThrow(UserNotExistsException::new);
+        if (user.getRoles().contains("SUPER_USER")|| userId.equals(login.toLowerCase())){
+            check = user;
+        }
+        return check;
+    }
+
+    private void isJWTAdmin(String xToken) {
+        String requestUserId = null;
+        try {
+            requestUserId = tokenProvider.decodeJWT(xToken).getId();
+        }catch (Exception e){
+            throw new BadJWTTokenException();
+        }
+        UserAccount requestUser = userAccountingRepository.findById(requestUserId).orElseThrow(ForbiddenAccessException::new);
+        if (!requestUser.getRoles().contains("SUPER_USER")){
+            throw new ForbiddenAccessException();
+        }
     }
 
 }

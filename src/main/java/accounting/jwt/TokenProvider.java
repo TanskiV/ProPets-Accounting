@@ -72,15 +72,13 @@ public class TokenProvider {
 
     }
 
-    public String getEmailFromBasicToken(String basicToken) {
-        String email = "";
+    public String[] getEmailAndPasswordFromBasicToken(String basicToken) {
         if (basicToken != null && basicToken.toLowerCase().startsWith("basic")) {
             String base64Credentials = basicToken.substring("Basic".length()).trim();
             byte[] credDecoded = Base64.getDecoder().decode(base64Credentials);
             String credentials = new String(credDecoded, StandardCharsets.UTF_8);
             final String[] values = credentials.split(":", 2);
-            email = values[0].toLowerCase();
-            return email;
+            return values;
         } else return null;
 
     }
