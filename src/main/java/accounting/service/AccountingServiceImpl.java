@@ -72,10 +72,8 @@ public class AccountingServiceImpl implements AccountingService {
         isEmail(tempDataFromToken[0]);
         UserAccount user = userAccountingRepository.findById(tempDataFromToken[0].toLowerCase()).orElseThrow(UserNotExistsException::new);
         String[] currentDataFromToken = tokenProvider.getEmailAndPasswordFromBasicToken("basic"+user.getBasicToken());
-            if (!tempDataFromToken[0].toLowerCase().equals(currentDataFromToken[0].toLowerCase())
-                    || !tempDataFromToken[1].equals(currentDataFromToken[1]))
-            {
-                throw new ResponseStatusException(HttpStatus.valueOf(400), "Request with bad Authentication param");
+            if (!tempDataFromToken[1].equals(currentDataFromToken[1])) {
+                throw new ResponseStatusException(HttpStatus.FORBIDDEN, "bad password");
             }
        ProfileUserDto profileUserDto = new ProfileUserDto(user.getAvatar(), user.getName(),
                 user.getEmail(), user.getPhone(), user.isBlock(), user.getRoles());
