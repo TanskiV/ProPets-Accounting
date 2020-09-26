@@ -37,16 +37,22 @@ public class AccountingServiceImpl implements AccountingService {
 
     @Override
     public ResponseEntity<ProfileUserDto> register(NewUserDto newUserDto)  {
-        String userData = null;
+        String userData;
      //Check email valid
+        try{
         if(!isEmail(newUserDto.getEmail())){
             throw new ResponseStatusException(HttpStatus.valueOf(400), "Bad email");
         }
-        if (newUserDto.getPassword().length() != 0) {
+        if (newUserDto.getPassword().length() != 0 && newUserDto.getName().length() != 0) {
             String email = newUserDto.getEmail().toLowerCase();
             userData = email + ":" + newUserDto.getPassword();
         } else {
-            throw new ResponseStatusException(HttpStatus.valueOf(400), "Request with password");
+            /*check if password or user name null*/
+            String messageError = newUserDto.getPassword().length() == 0 ? "field 'password:' without data"
+                    :  "field 'name:' without data ";
+            throw new ResponseStatusException(HttpStatus.valueOf(400), messageError);
+        }}catch (NullPointerException e){
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Null pinter exception");
         }
         String token = Base64.encode(userData.getBytes());
         UserAccount account = new UserAccount("", newUserDto.getName(), newUserDto.getEmail().toLowerCase(),
@@ -63,7 +69,7 @@ public class AccountingServiceImpl implements AccountingService {
 
     @Override
     public ResponseEntity<String> login(String basicToken) {
-        String base64Credentials = basicToken.substring("Basic".length()).trim();
+//        String base64Credentials = basicToken.substring("Basic".length()).trim();
         String[] tempDataFromToken = tokenProvider.getEmailAndPasswordFromBasicToken(basicToken);
         UserAccount user = userAccountingRepository.findById(tempDataFromToken[0].toLowerCase()).orElseThrow(UserNotExistsException::new);
         String[] currentDataFromToken = tokenProvider.getEmailAndPasswordFromBasicToken("basic"+user.getBasicToken());
@@ -159,8 +165,8 @@ public class AccountingServiceImpl implements AccountingService {
         userAccountingRepository.save(user);
         HttpHeaders header = new HttpHeaders();
         String newToken = tokenProvider.createJWT(user.getEmail(), user.getRoles());
-        header.set("X-Token", xToken);
-        BlockDto blockDto = new BlockDto().builder()
+        header.set("X-Token", newToken);
+        BlockDto blockDto = BlockDto.builder()
                 .login(user.getEmail())
                 .block(user.isBlock()).build();
         return ResponseEntity.ok().headers(header).body(blockDto);
@@ -248,12 +254,15 @@ public class AccountingServiceImpl implements AccountingService {
 
     private UserAccount checkAccess(String XToken, String login) {
         UserAccount check = null;
-        String userId = "";
+        String userId;
         try {
              userId = tokenProvider.decodeJWT(XToken).getId();
         }catch (Exception e){
             throw new BadJWTTokenException();
         }
+        Claims claims = tokenProvider.decodeJWT(XToken);
+        Set<String> r = (Set<String>) claims.get("jsonRoles");
+        System.out.println(r);
         UserAccount user = userAccountingRepository.findById(userId.toLowerCase()).orElseThrow(UserNotExistsException::new);
         if (user.getRoles().contains("SUPER_USER")|| userId.equals(login.toLowerCase())){
             check = user;
@@ -262,7 +271,7 @@ public class AccountingServiceImpl implements AccountingService {
     }
 
     private void isJWTAdmin(String xToken) {
-        String requestUserId = null;
+        String requestUserId;
         try {
             requestUserId = tokenProvider.decodeJWT(xToken).getId();
         }catch (Exception e){
