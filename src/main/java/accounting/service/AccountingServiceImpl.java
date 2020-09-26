@@ -23,6 +23,7 @@ import org.springframework.web.server.ResponseStatusException;
 import javax.mail.internet.AddressException;
 import javax.mail.internet.InternetAddress;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Set;
 
 
@@ -67,7 +68,6 @@ public class AccountingServiceImpl implements AccountingService {
 
     @Override
     public ResponseEntity<String> login(String basicToken) {
-//        String base64Credentials = basicToken.substring("Basic".length()).trim();
         String[] tempDataFromToken = tokenProvider.getEmailAndPasswordFromBasicToken(basicToken);
         isEmail(tempDataFromToken[0]);
         UserAccount user = userAccountingRepository.findById(tempDataFromToken[0].toLowerCase()).orElseThrow(UserNotExistsException::new);
@@ -255,9 +255,6 @@ public class AccountingServiceImpl implements AccountingService {
         }catch (Exception e){
             throw new BadJWTTokenException();
         }
-        Claims claims = tokenProvider.decodeJWT(XToken);
-        Set<String> r = (Set<String>) claims.get("jsonRoles");
-        System.out.println(r);
         UserAccount user = userAccountingRepository.findById(userId.toLowerCase()).orElseThrow(UserNotExistsException::new);
         if (user.getRoles().contains("SUPER_USER")|| userId.equals(login.toLowerCase())){
             check = user;
@@ -266,14 +263,10 @@ public class AccountingServiceImpl implements AccountingService {
     }
 
     private void isJWTAdmin(String xToken) {
-        String requestUserId;
-        try {
-            requestUserId = tokenProvider.decodeJWT(xToken).getId();
-        }catch (Exception e){
-            throw new BadJWTTokenException();
-        }
-        UserAccount requestUser = userAccountingRepository.findById(requestUserId).orElseThrow(ForbiddenAccessException::new);
-        if (!requestUser.getRoles().contains("SUPER_USER")){
+        String jsonRoles = tokenProvider.decodeJWT(xToken).getAudience();
+        Gson gson = new Gson();
+        List<String> roles = gson.fromJson(jsonRoles, List.class);
+        if (!roles.contains("SUPER_USER")){
             throw new ForbiddenAccessException();
         }
     }
