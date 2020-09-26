@@ -1,15 +1,20 @@
 package accounting.controller;
 
+import accounting.dao.UserAccountingRepository;
 import accounting.dto.BlockDto;
 import accounting.dto.EditUserDto;
 import accounting.dto.NewUserDto;
 import accounting.dto.ProfileUserDto;
+import accounting.model.UserAccount;
 import accounting.service.AccountingService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
 import java.util.Set;
+import java.util.stream.Collector;
+import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/account")
@@ -93,5 +98,15 @@ public class UserAccountingController {
     public ResponseEntity<String> updateToken(@RequestHeader("X-Token") String xToken) {
         return accountingService.updateToken(xToken);
     }
+//    @Autowired
+//    UserAccountingRepository userAccountingRepository;
+//    @DeleteMapping("/deleteUsers")
+//    public void deleteUsers(){
+//        List <UserAccount> userAccounts = userAccountingRepository.findAll();
+//      List<String> usersToDell = userAccounts.stream().map(u -> u.getEmail())
+//                .filter(userId -> !userId.equals("admin@admin.com"))
+//                .collect(Collectors.toList());
+//      usersToDell.forEach(u -> userAccountingRepository.deleteById(u));
+//    }
 
 }

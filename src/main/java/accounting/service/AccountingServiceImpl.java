@@ -40,9 +40,7 @@ public class AccountingServiceImpl implements AccountingService {
         String userData;
      //Check email valid
         try{
-        if(!isEmail(newUserDto.getEmail())){
-            throw new ResponseStatusException(HttpStatus.valueOf(400), "Bad email");
-        }
+       isEmail(newUserDto.getEmail());
         if (newUserDto.getPassword().length() != 0 && newUserDto.getName().length() != 0) {
             String email = newUserDto.getEmail().toLowerCase();
             userData = email + ":" + newUserDto.getPassword();
@@ -71,6 +69,7 @@ public class AccountingServiceImpl implements AccountingService {
     public ResponseEntity<String> login(String basicToken) {
 //        String base64Credentials = basicToken.substring("Basic".length()).trim();
         String[] tempDataFromToken = tokenProvider.getEmailAndPasswordFromBasicToken(basicToken);
+        isEmail(tempDataFromToken[0]);
         UserAccount user = userAccountingRepository.findById(tempDataFromToken[0].toLowerCase()).orElseThrow(UserNotExistsException::new);
         String[] currentDataFromToken = tokenProvider.getEmailAndPasswordFromBasicToken("basic"+user.getBasicToken());
             if (!tempDataFromToken[0].toLowerCase().equals(currentDataFromToken[0].toLowerCase())
@@ -241,15 +240,13 @@ public class AccountingServiceImpl implements AccountingService {
                 .name(account.getName()).phone(account.getPhone()).roles(account.getRoles()).build();
     }
 
-    private boolean isEmail(String email) {
-        boolean result = true;
+    private void isEmail(String email) {
         try {
             InternetAddress   emailAdr = new InternetAddress(email);
             emailAdr.validate();
         } catch (AddressException e) {
-            result = false;
+            throw new ResponseStatusException(HttpStatus.valueOf(400), "Bad email");
         }
-        return result;
     }
 
     private UserAccount checkAccess(String XToken, String login) {
