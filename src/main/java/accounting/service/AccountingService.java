@@ -6,6 +6,7 @@ import accounting.dto.NewUserDto;
 import accounting.dto.ProfileUserDto;
 import org.springframework.http.ResponseEntity;
 
+import java.util.List;
 import java.util.Set;
 
 public interface AccountingService {
@@ -32,5 +33,7 @@ public interface AccountingService {
     ResponseEntity<Set<String>> getFavorite(String xToken, String login);
 
     ResponseEntity<String> updateToken(String xToken);
+
+    ResponseEntity<List<ProfileUserDto>> deleteAllUsers(String XToken);
 
 }

@@ -25,6 +25,7 @@ import javax.mail.internet.InternetAddress;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 
 @Service
@@ -229,6 +230,21 @@ public class AccountingServiceImpl implements AccountingService {
                     .headers(headers)
                     .build();
         } else return ResponseEntity.notFound().eTag("Token not a valid").build();
+
+    }
+
+    @Override
+    public ResponseEntity<List<ProfileUserDto>> deleteAllUsers(String XToken) {
+        isJWTAdmin(XToken);
+        List <UserAccount> userAccounts = userAccountingRepository.findAll();
+        List<UserAccount> usersToDell = userAccounts.stream()
+                .filter(user -> !user.getRoles().contains("SUPER_USER"))
+                .collect(Collectors.toList());
+        usersToDell.forEach(user -> userAccountingRepository.deleteById(user.getEmail()));
+        List<ProfileUserDto> dellUsersToResponse = usersToDell.stream()
+                .map(user -> profileUserToProfileUserDto(user))
+                .collect(Collectors.toList());
+        return ResponseEntity.ok(dellUsersToResponse);
 
     }
 

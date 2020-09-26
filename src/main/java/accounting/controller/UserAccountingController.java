@@ -98,15 +98,10 @@ public class UserAccountingController {
     public ResponseEntity<String> updateToken(@RequestHeader("X-Token") String xToken) {
         return accountingService.updateToken(xToken);
     }
-//    @Autowired
-//    UserAccountingRepository userAccountingRepository;
-//    @DeleteMapping("/deleteUsers")
-//    public void deleteUsers(){
-//        List <UserAccount> userAccounts = userAccountingRepository.findAll();
-//      List<String> usersToDell = userAccounts.stream().map(u -> u.getEmail())
-//                .filter(userId -> !userId.equals("admin@admin.com"))
-//                .collect(Collectors.toList());
-//      usersToDell.forEach(u -> userAccountingRepository.deleteById(u));
-//    }
+
+    @DeleteMapping("/admin/deleteUsers")
+    public ResponseEntity<List<ProfileUserDto>> deleteUsers(@RequestHeader("X-Token") String XToken){
+        return accountingService.deleteAllUsers(XToken);
+    }
 
 }
