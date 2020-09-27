@@ -40,6 +40,9 @@ public class AccountingServiceImpl implements AccountingService {
     @Override
     public ResponseEntity<ProfileUserDto> register(NewUserDto newUserDto)  {
         String userData;
+        if (userAccountingRepository.existsById(newUserDto.getEmail())) {
+            throw new ResponseStatusException(HttpStatus.valueOf(400), "User exist");
+        }
      //Check email valid
         try{
        isEmail(newUserDto.getEmail());
@@ -57,9 +60,7 @@ public class AccountingServiceImpl implements AccountingService {
         String token = Base64.encode(userData.getBytes());
         UserAccount account = new UserAccount("", newUserDto.getName(), newUserDto.getEmail().toLowerCase(),
                 "", token, false, new HashSet<>(), new HashSet<>());
-        if (userAccountingRepository.existsById(newUserDto.getEmail())) {
-            throw new ResponseStatusException(HttpStatus.valueOf(400), "User exist");
-        }
+        account.getRoles().add("ROLE_USER");
         userAccountingRepository.save(account);
 
         return ResponseEntity.ok(profileUserToProfileUserDto(account));
@@ -259,6 +260,11 @@ public class AccountingServiceImpl implements AccountingService {
             InternetAddress   emailAdr = new InternetAddress(email);
             emailAdr.validate();
         } catch (AddressException e) {
+            throw new ResponseStatusException(HttpStatus.valueOf(400), "Bad email");
+        }
+        int start = email.indexOf("@");
+        String subEmail = email.substring(start);
+        if (!subEmail.contains(".")){
             throw new ResponseStatusException(HttpStatus.valueOf(400), "Bad email");
         }
     }
