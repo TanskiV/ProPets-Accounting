@@ -46,22 +46,27 @@ class AccountingServiceImplTest {
 
     @BeforeEach
     void setUp() {
-
-        userAccountingRepository.deleteById(newUserDto.getEmail());
-
     }
 
     @Test
     void register() {
-
+        userAccountingRepository.deleteById(newUserDto.getEmail());
         accountingService.register(newUserDto);
         boolean check = userAccountingRepository.existsById(newUserDto.getEmail());
         assertEquals(check, true);
-        String errorMessage = "400 BAD_REQUEST \"User exist\"";
+        String errorMessage = "400 BAD_REQUEST";
         try{
          accountingService.register(newUserDto);
         }catch (ResponseStatusException e){
            assertTrue(e.getMessage().contains(errorMessage));
+        }
+        String email = newUserDto.getEmail().replace(".", "");
+        newUserDto.setEmail(email);
+        try {
+            accountingService.register(newUserDto);
+        }catch (ResponseStatusException e){
+            System.out.println(e.getMessage());
+            assertTrue(e.getMessage().contains(errorMessage));
         }
     }
 

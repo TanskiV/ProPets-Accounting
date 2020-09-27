@@ -55,7 +55,7 @@ public class AccountingServiceImpl implements AccountingService {
                     :  "field 'name:' without data ";
             throw new ResponseStatusException(HttpStatus.valueOf(400), messageError);
         }}catch (NullPointerException e){
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Null pinter exception");
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Null pointer exception");
         }
         String token = Base64.encode(userData.getBytes());
         UserAccount account = new UserAccount("", newUserDto.getName(), newUserDto.getEmail().toLowerCase(),
