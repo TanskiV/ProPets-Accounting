@@ -58,8 +58,8 @@ public class AccountingServiceImpl implements AccountingService {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Null pointer exception");
         }
         String token = Base64.encode(userData.getBytes());
-        UserAccount account = new UserAccount("", newUserDto.getName(), newUserDto.getEmail().toLowerCase(),
-                "", token,"", false, new HashSet<>(), new HashSet<>());
+        UserAccount account = new UserAccount(null, newUserDto.getName(), newUserDto.getEmail().toLowerCase(),
+                null, token,null, false, new HashSet<>(), new HashSet<>());
         account.getRoles().add("ROLE_USER");
         userAccountingRepository.save(account);
 
