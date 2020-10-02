@@ -59,7 +59,7 @@ public class AccountingServiceImpl implements AccountingService {
         }
         String token = Base64.encode(userData.getBytes());
         UserAccount account = new UserAccount("", newUserDto.getName(), newUserDto.getEmail().toLowerCase(),
-                "", token, false, new HashSet<>(), new HashSet<>());
+                "", token,"", false, new HashSet<>(), new HashSet<>());
         account.getRoles().add("ROLE_USER");
         userAccountingRepository.save(account);
 
@@ -78,7 +78,7 @@ public class AccountingServiceImpl implements AccountingService {
                 throw new ResponseStatusException(HttpStatus.FORBIDDEN, "bad password");
             }
        ProfileUserDto profileUserDto = new ProfileUserDto(user.getAvatar(), user.getName(),
-                user.getEmail(), user.getPhone(), user.isBlock(), user.getRoles());
+                user.getEmail(), user.getPhone(), user.getFacebookUrl(), user.isBlock(), user.getRoles());
         Gson json = new Gson();
         String jsonResponse = json.toJson(profileUserDto);
         String token = tokenProvider.createJWT(profileUserDto.getEmail(), profileUserDto.getRoles());
@@ -105,9 +105,11 @@ public class AccountingServiceImpl implements AccountingService {
         if (user == null){
             throw new ForbiddenAccessException();
         }
+        user = userAccountingRepository.findById(login).orElseThrow(UserNotExistsException::new);
         user.setAvatar(editUserDto.getAvatar());
         user.setName(editUserDto.getName());
         user.setPhone(editUserDto.getPhone());
+        user.setFacebookUrl(editUserDto.getFacebookUrl());
         userAccountingRepository.save(user);
         HttpHeaders header = new HttpHeaders();
         String newToken = tokenProvider.createJWT(user.getEmail(), user.getRoles());
@@ -251,8 +253,14 @@ public class AccountingServiceImpl implements AccountingService {
 
     private ProfileUserDto profileUserToProfileUserDto(UserAccount account) {
         return ProfileUserDto.builder()
-                .email(account.getEmail()).avatar(account.getAvatar()).block(account.isBlock())
-                .name(account.getName()).phone(account.getPhone()).roles(account.getRoles()).build();
+                .email(account.getEmail())
+                .avatar(account.getAvatar())
+                .block(account.isBlock())
+                .name(account.getName())
+                .phone(account.getPhone())
+                .facebookUrl(account.getFacebookUrl())
+                .roles(account.getRoles())
+                .build();
     }
 
     private void isEmail(String email) {
@@ -277,7 +285,7 @@ public class AccountingServiceImpl implements AccountingService {
         }catch (Exception e){
             throw new BadJWTTokenException();
         }
-        UserAccount user = userAccountingRepository.findById(userId.toLowerCase()).orElseThrow(UserNotExistsException::new);
+        UserAccount user = userAccountingRepository.findById(userId.toLowerCase()).orElseThrow(ForbiddenAccessException::new);
         if (user.getRoles().contains("SUPER_USER")|| userId.equals(login.toLowerCase())){
             check = user;
         }

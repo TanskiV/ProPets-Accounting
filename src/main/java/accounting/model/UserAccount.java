@@ -21,6 +21,7 @@ public class UserAccount {
     String email;
     String phone;
     String basicToken;
+    String facebookUrl;
     boolean block;
     Set<String> roles;
     Set<String> favorites;

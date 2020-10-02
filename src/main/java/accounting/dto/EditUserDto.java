@@ -7,5 +7,6 @@ public class EditUserDto {
 	String avatar;
 	String name;
 	String phone;
+	String facebookUrl;
 
 }

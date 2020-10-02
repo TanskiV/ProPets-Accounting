@@ -18,10 +18,7 @@ public class ProfileUserDto {
 	String name;
 	String email;
 	String phone;
+	String facebookUrl;
 	boolean block;
 	Set<String> roles;
-	
-	public String print() {
-		return name +" "+ avatar+ " "+ email+ " " +phone+ " " +block+" " +roles;
-	}
 }
