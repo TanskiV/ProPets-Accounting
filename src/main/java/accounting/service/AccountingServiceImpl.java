@@ -122,6 +122,7 @@ public class AccountingServiceImpl implements AccountingService {
         if (checkAccess(xToken, login) == null){
             throw new ForbiddenAccessException();
         }
+        isEmail(login);
         UserAccount user = userAccountingRepository.findById(login.toLowerCase()).orElseThrow(UserNotExistsException::new);
         userAccountingRepository.delete(user);
         HttpHeaders header = new HttpHeaders();
