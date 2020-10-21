@@ -93,7 +93,10 @@ public class AccountingServiceImpl implements AccountingService {
     @Override
     public ResponseEntity<ProfileUserDto> userInfo(String xToken, String login) {
         isEmail(login);
-        checkAccess(xToken, login);
+       UserAccount check = checkAccess(xToken, login);
+       if (check == null){
+           throw new ForbiddenAccessException();
+       }
         UserAccount user = userAccountingRepository.findById(login.toLowerCase()).orElseThrow(UserNotExistsException::new);
         HttpHeaders header = new HttpHeaders();
         String newToken = tokenProvider.createJWT(user.getEmail(), user.getRoles());
