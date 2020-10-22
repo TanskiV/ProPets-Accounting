@@ -15,9 +15,10 @@ import java.util.Set;
 @Document(collection = "ProPetsUsers")
 
 public class UserAccount {
+    @Id
+    String id;
     String avatar;
     String name;
-    @Id
     String email;
     String phone;
     String basicToken;

@@ -8,5 +8,6 @@ public class EditUserDto {
 	String name;
 	String phone;
 	String facebookUrl;
-
+	String password;
+	String email;
 }
